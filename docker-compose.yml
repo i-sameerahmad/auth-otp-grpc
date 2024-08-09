@@ -1,0 +1,52 @@
+version: '3.8'
+
+services:
+  auth_service:
+    build:
+      context: .
+      dockerfile: auth_service/Dockerfile
+    environment:
+      - AMQP_URL=${AMQP_URL}
+      - DSN=${DSN}
+      - AUTH_SERVICE_PORT=${AUTH_SERVICE_PORT}
+      - OTP_SERVICE_ADDRESS=${OTP_SERVICE_ADDRESS}
+    ports:
+      - "${AUTH_SERVICE_PORT}:${AUTH_SERVICE_PORT}"
+    depends_on:
+      - rabbitmq
+      - auth-db
+
+  otp_service:
+    build:
+      context: .
+      dockerfile: otp_service/Dockerfile
+    environment:
+      - TWILIO_ACCOUNT_SID=${TWILIO_ACCOUNT_SID}
+      - TWILIO_AUTH_TOKEN=${TWILIO_AUTH_TOKEN}
+      - TWILIO_FROM_PHONE=${TWILIO_FROM_PHONE}
+      - TWILIO_SERVICES_ID=${TWILIO_SERVICES_ID}
+      - AMQP_URL=${AMQP_URL}
+      - OTP_SERVICE_PORT=${OTP_SERVICE_PORT}
+    ports:
+      - "${OTP_SERVICE_PORT}:${OTP_SERVICE_PORT}"
+    depends_on:
+      - rabbitmq
+
+  rabbitmq:
+    image: "rabbitmq:3-management"
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+
+  auth-db:
+    image: postgres:latest
+    environment:
+      POSTGRES_USER: me
+      POSTGRES_PASSWORD: root
+      POSTGRES_DB: authdb
+    ports:
+      - "5432:5432"
+
+networks:
+  default:
+    name: go_auth_network
